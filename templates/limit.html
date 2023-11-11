@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <a href="/expenses-chart/">Chart</a>
+    <form method="post">
+        {% csrf_token %}
+        <p>Add Product and Limit</p>
+        <label for="product">Product</label><br>
+        <input type="text" name="product"><br>
+        <label for="amount">Product amount</label><br>
+        <input type="number" name="amount"><br>
+        <label for="limit">Type Limit</label><br>
+        <input type="number" name="limit"><br>
+        <label for="description">Description</label><br>
+        <input type="text" name="description" placeholder="(not necessary)"><br>
+        <label for="date">Date(default: current date)</label><br>
+        <input type="date" name="date">
+        <label for="time_to_limit">Choose a time range:</label>
+                <select name="time" id="time">
+                  <option value="month">month</option>
+                  <option value="year">year</option>
+                </select><br>
+        <input type="submit" name="Submit">
+    </form>
+</body>
+</html>
