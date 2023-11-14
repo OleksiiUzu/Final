@@ -11,9 +11,9 @@
     <div style="align-content: space-around">
     {% for name, value in total_money.items %}
         {% if name == 'UAH' %}
-            <h1 style="align-items: center; padding-left: 550px">TOTAL: {{ value }} {{ name }}</h1>
+            <h1 style="align-items: center; padding-left: 500px">Загальні витрати: {{ value }} {{ name }}</h1>
         {% else %}
-            <h3 style="align-items: center; padding-left: 610px">TOTAL: {{ value }} {{ name }}</h3>
+            <h3 style="align-items: center; padding-left: 560px">Загальні витрати: {{ value }} {{ name }}</h3>
         {% endif %}
     {% endfor %}
     </div>
@@ -40,12 +40,12 @@
     </div>
 
         <a href="details/">
-            <h3 style="padding-left: 620px">Редагувати дані</h3>
+            <h3 style="padding-left: 580px">Перегляд/Редагування витрат</h3>
         </a>
         <a href="/expenses-chart/limit/">
-            <h3 style="padding-left: 620px">Add product</h3>
+            <h3 style="padding-left: 580px">Додати продукт з лімітом</h3>
         </a>
-    <div style=" background-color: cadetblue; border-radius: 10px; width: 300px; margin-left:600px;">
+    <div style=" background-color: cadetblue; border-radius: 10px; width: 300px; margin-left:550px;">
         <form method="post" name="products" style=" display: inline-block; margin-right: 10px;">
         {% csrf_token %}
             {% if limits is not None %}
@@ -57,14 +57,14 @@
                     <p style="margin: 0; text-align: center">Назва продукту: {{ item.product_name }}</p>
                     <p style="margin: 0; text-align: center">Грошей виділено: {{ item.limit }}</p>
                     <p style="margin: 0; text-align: center">Описання: {{ item.description }}</p>
-                    <p style="margin: 0; text-align: center">Залишилось до кінця ліміту:  {{ product_data|get_item:item.product_name|first }}</p>
+                    <p style="margin: 0; text-align: center">Залишилось до кінця ліміту:  {{ product_data|get_item:item.product_name|first }} купівель/ля</p>
                 {% endfor %}
             {% endif %}
-            <input type="submit" value="Вибрати" style="width: 300px">
+            <input type="submit" value="Обрати" style="width: 300px">
         </form>
     </div>
     <div>
-        <img src="data:image/png;base64,{{ encoded_image }}" alt="Grouped Histogram">
+        <img src="data:image/png;base64,{{ encoded_image }}" alt="Grouped Histogram" style="padding-left: 360px">
         {{ chart|safe }}
     </div>
 </body>

@@ -1,20 +1,28 @@
 import asyncio
+import base64
+import collections
+
 from datetime import datetime
 
+import telebot
+from django.conf import settings
 from django.shortcuts import render, redirect
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 
-from .templatetags.filters import get_item
-from .models import Expense, Limits, ProductCount
-from .utils import (money_amount_validation,
-                    convert_amount,
-                    chart_calculation,
-                    product_limits_calculation,
-                    adding_money, get_products_left, group_histogram)
-
+from money_spending.templatetags.filters import get_item  # custom filter for templates
+from money_spending.models import Expense, Limits, ProductCount, TelegramChatID
+from money_spending.utils import (money_amount_validation,
+                                  convert_amount,
+                                  chart_calculation,
+                                  product_limits_calculation,
+                                  adding_money,
+                                  get_products_left,
+                                  group_histogram,
+                                  time_range_expenses)
+from django.middleware.csrf import get_token
+from django.http import JsonResponse
 
 # add rise or sand message
-# add choose from date to date
-# add telegram bot
 
 
 def index(request):
@@ -28,21 +36,20 @@ def expenses_chart(request):
         post_data = request.POST
 
         if 'products' in request.POST:
-            product_limits_calculation(post_data, Limits, Expense, ProductCount, request.user)
+            product_limits_calculation(post_data, Limits, Expense, ProductCount, request.user.id)
+            return redirect('/expenses-chart/')
         else:
-            adding_money(post_data, Expense, request.user)
+            adding_money(post_data, Expense, request.user.id)
         return redirect('/expenses-chart/')
 
-    expenses = Expense.objects.all().filter(user=request.user.id).order_by('date')
-    print(expenses)
-    dates = [expense.date.strftime('%Y-%m-%d %H:%M:%S') for expense in expenses]  # here can add timerange
-    print(dates)
-    amounts = [float(expense.amount) for expense in expenses]
-    limits = Limits.objects.all().filter(user=request.user.id)
-    total = asyncio.run(convert_amount(amounts))
-    chart = chart_calculation(dates, amounts)
-    product_dict = get_products_left(ProductCount, Limits, request.user.id)
-    encoded_image = group_histogram(product_dict)
+    expenses: collections.Iterable = Expense.objects.all().filter(user_id=request.user.id).order_by('date')
+    dates: list = [expense.date.strftime('%Y-%m-%d %H:%M:%S') for expense in expenses]
+    amounts: list = [float(expense.amount) for expense in expenses]
+    limits: collections.Iterable = Limits.objects.all().filter(user_id=request.user.id)
+    total: dict = asyncio.run(convert_amount(amounts))
+    chart: str = chart_calculation(dates, amounts)
+    product_dict: dict = get_products_left(ProductCount, Limits, request.user.id)
+    encoded_image: base64 = group_histogram(product_dict)
     return render(request, 'expenses_chart.html', {'chart': chart,
                                                    'total_money': total,
                                                    'limits': limits,
@@ -52,29 +59,19 @@ def expenses_chart(request):
 
 
 def details(request):
+    expenses = Expense.objects.all().filter(user_id=request.user.id)
     if request.method == 'POST':
         if 'Del' in request.POST:
             del_object = Expense.objects.filter(id=int(request.POST['id'])).all()
             del_object.delete()
             return redirect('/expenses-chart/details')
-        if 'time' in request.POST:
-            print(request.POST)
-            for item in request.POST['time']:
-                date = 0
-                match item:
-                    case 'day':
-                        date = 1
-                    case 'month':
-                        date = 2
-                    case 'year':
-                        date = 3
 
-                print(date)
+        elif 'time' in request.POST:
+            selected_time = request.POST.get('time', None)
+            range_expenses = time_range_expenses(selected_time, expenses, request.user.id)
+            return render(request, 'details.html', {'expenses': range_expenses})
 
-            expenses = Expense.objects.all().filter(user=request.user.id).filter()
-            return render(request, 'details.html', {'expenses': expenses})
         return redirect(f'/expenses-chart/details/edit/id_data={int(request.POST["id"])}')
-    expenses = Expense.objects.all().filter(user=request.user.id)
     return render(request, 'details.html', {'expenses': expenses})
 
 
@@ -118,6 +115,34 @@ def add_limit(request):
             user_id=request.user.id
         )
         new_limit.save()
-        return redirect('/expenses-chart/limit/')
+        new_product = ProductCount.objects.create(
+            number_of_products=0,
+            product_id_id=new_limit.id
+        )
+        new_product.save()
+        return redirect('/expenses-chart/')
 
     return render(request, 'limit.html')
+
+
+@csrf_exempt
+def get_bot_info(request):
+    bot = telebot.TeleBot(settings.TELEGRAM_BOT_TOKEN)
+    if request.method == 'POST':
+        chat_id = request.POST['chat_id']
+        data = TelegramChatID.objects.filter(chat_id=chat_id).first()
+        if data:
+            expenses_data = Expense.objects.filter(user_id=data.user_id).all()
+
+        else:
+            new_chat = TelegramChatID.objects.create(
+                chat_id=chat_id,
+                user_id=request.user.id
+            )
+            new_chat.save()
+            expenses_data = Expense.objects.filter(user_id=new_chat.user_id).all()
+        amounts: list = [float(expense.amount) for expense in expenses_data]
+        bot.send_message(chat_id, f"Загальна Сумма: {sum(amounts)}")
+        return JsonResponse({'status': 'success'})
+    token = get_token(request)
+    return JsonResponse({'csrftoken': token})

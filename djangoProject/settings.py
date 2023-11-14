@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'money_spending.apps.MoneySpendingConfig',
-    'user.apps.UserConfig'
+    'user.apps.UserConfig',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +50,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'djangoProject.urls'
@@ -102,7 +104,20 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
+        'LOCATION': 'memcached:11211',
+    }
+}
 
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+]
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -124,3 +139,5 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+TELEGRAM_BOT_TOKEN = '6636933103:AAHjf5UY88pUEIOsZhnePdx0tIcneAUtzA4'
+CSRF_USE_SESSIONS = True

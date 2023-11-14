@@ -4,10 +4,11 @@ import aiohttp
 import base64
 from io import BytesIO
 
-from typing import Union
+from typing import Union, Coroutine, Any, Callable
 
 import datetime
 
+from django.contrib.auth.models import User
 from plotly.offline import plot
 import plotly.graph_objs as go
 
@@ -19,7 +20,7 @@ from pymemcache.client.base import Client
 client = Client(('localhost', 11211))
 
 
-def cache(async_fun):
+def cache(async_fun) -> Callable[[], Coroutine[Any, Any, dict]]:
     async def wrapper() -> dict:
         cache_keys = ['USD', 'EUR', 'PLN']
         cache_values = []
@@ -29,7 +30,7 @@ def cache(async_fun):
         if all(cache_data is None for cache_data in cache_values):
             result = await async_fun()
             for key, value in result.items():
-                client.set(key, str(float(value)), expire=60 * 60 * 5)
+                client.set(key, str(float(value)), expire=60*60*5)
             return result
         else:
             result_dict = {}
@@ -69,7 +70,7 @@ async def get_currency() -> Union[dict, ConnectionError]:
         return {'Client Error': CE}
 
 
-async def currency_calculation(total_value, value):
+async def currency_calculation(total_value: int, value: int) -> float:
     return round(float(total_value) / value, 2)
 
 
@@ -98,7 +99,7 @@ def money_amount_validation(data: dict) -> Union[int, float]:
     return amount
 
 
-def chart_calculation(dates: list, amounts: list) -> dict:
+def chart_calculation(dates: list, amounts: list) -> str:
     trace = go.Scatter(x=dates, y=amounts, mode='text+lines+markers', name='Витрати')
     data = [trace]
     layout = go.Layout(title='Графік витрат', xaxis={'title': 'Дата'}, yaxis={'title': 'Сума'})
@@ -111,15 +112,16 @@ def product_limits_calculation(post_data, limits_model, expense_model, products_
     list_of_products_id = post_data.getlist('products')
 
     for id_data in list_of_products_id:
-        limits = limits_model.objects.all().filter(user_id=user_data.id).filter(id=int(id_data))
+        limits = limits_model.objects.all().filter(user_id=user_data).filter(id=int(id_data))
         limits_items_list.append(limits)
     all_objects = [obj for queryset in limits_items_list for obj in queryset]
+    user = User.objects.filter(id=user_data).first()
     for item in all_objects:
         expense_model.objects.create(
             amount=item.product_amount,
             date=datetime.datetime.now(),
             description=item.description,
-            user=user_data.id,
+            user_id=user,
             product_id=item.id
         )
         product = products_model.objects.all().filter(product_id=item.id)
@@ -155,25 +157,17 @@ def get_products_left(products_model, limit_model, user_data) -> dict:
 
 def adding_money(post_data, expense_model, user_data) -> None:
     amount = money_amount_validation(post_data)
+    user = User.objects.filter(id=user_data).first()
     if post_data['date'] == '':
         date = datetime.datetime.now()
     else:
         date_time = datetime.datetime.now()
-        date = datetime.datetime.strptime(post_data['date'], '%Y-%m-%d %H:%M:%S')
-        date = date.replace(
-            hour=int(date_time.hour),
-            minute=int(date_time.minute),
-            second=int(date_time.second)
-        )
-    expense_model.objects.create(
-        amount=amount,
-        date=date,
-        description=post_data['comment'],
-        user_id=user_data.id
-    )
+        date = datetime.datetime.strptime(post_data['date'], '%Y-%m-%d')
+        date = date.replace(hour=int(date_time.hour),minute=int(date_time.minute),second=int(date_time.second))
+    expense_model.objects.create(amount=amount,date=date,description=post_data['comment'],user_id=user)
 
 
-def group_histogram(product_dict):
+def group_histogram(product_dict) -> base64:
     data = {}
     for key, value in product_dict.items():
         data[key] = [value[1], value[0]]
@@ -184,7 +178,6 @@ def group_histogram(product_dict):
 
     for i, (label, values) in enumerate(data.items()):
         adjusted_index = i
-        print(label)
 
         for j, value in enumerate(values):
             color_index = 1 if j == np.argmax(values) else 0
@@ -202,3 +195,17 @@ def group_histogram(product_dict):
     encoded_image = base64.b64encode(image_stream.read()).decode('utf-8')
 
     return encoded_image
+
+
+def time_range_expenses(time, expense_object, user) -> object:
+    expenses = expense_object.filter(user_id=user)
+    if time == 'month':
+        month = datetime.datetime.now().month
+        year = datetime.datetime.now().year
+        expenses = expense_object.filter(date__month=month).filter(date__year=year)
+    elif time == 'year':
+        year = datetime.datetime.now().year
+        expenses = expense_object.filter(date__year=year)
+    elif time == 'all':
+        expenses = expense_object.filter(user_id=user)
+    return expenses

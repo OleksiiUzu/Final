@@ -11,22 +11,28 @@
     <a href="/expenses-chart/">Chart</a>
     <form method="post">
         {% csrf_token %}
-        <p>Add Product and Limit</p>
-        <label for="product">Product</label><br>
+        <p>Додати продукт з лімітом</p>
+        <label for="product">Продукт</label><br>
         <input type="text" name="product"><br>
-        <label for="amount">Product amount</label><br>
+
+        <label for="amount">Ціна продукта</label><br>
         <input type="number" name="amount"><br>
-        <label for="limit">Type Limit</label><br>
+
+        <label for="limit">Виділені кошти</label><br>
         <input type="number" name="limit"><br>
-        <label for="description">Description</label><br>
+
+        <label for="description">Опис</label><br>
         <input type="text" name="description" placeholder="(not necessary)"><br>
-        <label for="date">Date(default: current date)</label><br>
-        <input type="date" name="date">
-        <label for="time_to_limit">Choose a time range:</label>
+
+        <label for="date">Дата з якої почнеться ліміт(за замовчуванням: поточна дата)</label><br>
+        <input type="date" name="date"><br>
+
+        <label for="time_to_limit">Ліміт на кількість часу:</label>
                 <select name="time" id="time">
                   <option value="month">month</option>
                   <option value="year">year</option>
                 </select><br>
+
         <input type="submit" name="Submit">
     </form>
 </body>

@@ -14,9 +14,9 @@
         {% csrf_token %}
         <label for="time">Choose a time range:</label>
             <select name="time" id="time">
-              <option name="day">day</option>
-              <option name="month">month</option>
-              <option name="year">year</option>
+              <option name="month">current month</option>
+              <option name="year">current year</option>
+              <option name="all">all</option>
             </select>
             <input type="submit" value="Визначити">
         </form>
